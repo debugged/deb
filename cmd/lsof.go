@@ -49,7 +49,9 @@ var lsofCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		c.Start()
+		if err := c.Start(); err != nil {
+			log.Fatal(err)
+		}
 
 		processMap := make(map[string]*Process)
 		scanner := bufio.NewScanner(stderr)
@@ -75,7 +77,9 @@ var lsofCmd = &cobra.Command{
 			}
 			process.Count++
 		}
-		c.Wait()
+		if err := c.Wait(); err != nil {
+			log.Fatal(err)
+		}
 
 		processes := make([]Process, len(processMap))
 		i := 0
