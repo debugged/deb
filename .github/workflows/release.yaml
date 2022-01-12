@@ -29,6 +29,8 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   release-check:
     if: github.event.action == 'labeled'
     runs-on: ubuntu-latest
