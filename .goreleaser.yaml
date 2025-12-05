@@ -1,33 +1,46 @@
 project_name: deb
+
 before:
   hooks:
     - go mod tidy
     - go generate ./...
+
 builds:
-  - env:
+  - id: deb
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
+
 archives:
-  - replacements:
+  - id: deb
+    format: tar.gz
+    replacements:
       darwin: Darwin
       linux: Linux
       windows: Windows
       386: i386
       amd64: x86_64
+
 checksum:
-  name_template: "checksums.txt"
+  name_template: checksums.txt
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
+  use: git
   sort: asc
+
 release:
   prerelease: auto
   name_template: "{{ .Tag }}"
+
 brews:
-  - tap:
+  - name: deb
+    tap:
       owner: debugged
       name: homebrew-tap
       branch: main
