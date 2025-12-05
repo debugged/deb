@@ -35,7 +35,7 @@ checksum:
   name_template: checksums.txt
 
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  version_template: "{{ .Tag }}-next"
 
 changelog:
   use: git
@@ -48,6 +48,7 @@ release:
 homebrew_casks:
   - name: deb
     homepage: https://www.debugged.nl
+    directory: ""
     repository:
       owner: debugged
       name: homebrew-tap
