@@ -235,7 +235,7 @@ func init() {
 	oopsIforgotToLogMyHoursCmd.Flags().StringVar(&flagFrom, "from", "", "Start date (YYYY-MM-DD)")
 	oopsIforgotToLogMyHoursCmd.Flags().StringVar(&flagTo, "to", "", "End date (YYYY-MM-DD, defaults to today)")
 	oopsIforgotToLogMyHoursCmd.Flags().BoolVar(&flagJSON, "json", false, "Output JSON instead of pretty format")
-	oopsIforgotToLogMyHoursCmd.Flags().IntVar(&flagMaxDepth, "depth", 3, "Maximum directory traversal depth when searching for git repos")
+	oopsIforgotToLogMyHoursCmd.Flags().IntVar(&flagMaxDepth, "depth", 5, "Maximum directory traversal depth when searching for git repos")
 }
 
 func getGitUserEmail(repoPath string) (string, error) {
