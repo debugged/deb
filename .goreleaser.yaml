@@ -48,7 +48,7 @@ release:
 homebrew_casks:
   - name: deb
     homepage: https://www.debugged.nl
-    directory: ""
+    directory: "."
     repository:
       owner: debugged
       name: homebrew-tap
