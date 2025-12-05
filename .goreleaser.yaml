@@ -18,7 +18,7 @@ archives:
       386: i386
       amd64: x86_64
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 snapshot:
   name_template: "{{ .Tag }}-next"
 changelog:
@@ -27,13 +27,12 @@ release:
   prerelease: auto
   name_template: "{{ .Tag }}"
 brews:
-  - 
-    tap:
+  - tap:
       owner: debugged
       name: homebrew-tap
       branch: main
     goarm: 6
-    homepage:  https://www.debugged.nl
+    homepage: https://www.debugged.nl
     commit_author:
       name: toonvanstrijp
       email: toon@debugged.nl
