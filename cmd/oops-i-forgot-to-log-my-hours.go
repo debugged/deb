@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -101,10 +102,27 @@ Examples:
 			WithRemoveWhenDone(true).
 			Start("Scanning for git repositories...")
 
-		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return err
+				scanSpinner.Fail("Error while scanning %s: %v", path, err)
+				return nil
 			}
+
+			// skip non-directories early
+			if !d.IsDir() {
+				return nil
+			}
+
+			// skip already found repos
+			for repoPath := range seen {
+				rel, err := filepath.Rel(repoPath, path)
+				if err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+					return filepath.SkipDir
+				}
+			}
+
+			// update spinner with current path (nicely shortened)
+			scanSpinner.UpdateText(prettyScanText(len(repos), path))
 
 			// Calculate depth
 			rel, err := filepath.Rel(root, path)
@@ -117,16 +135,14 @@ Examples:
 				return filepath.SkipDir
 			}
 
-			if info.IsDir() && info.Name() == ".git" {
+			if d.IsDir() && d.Name() == ".git" {
 				repoPath := filepath.Dir(path)
 				if !seen[repoPath] {
 					seen[repoPath] = true
 					repos = append(repos, repoPath)
 
 					// update spinner text with a little status
-					scanSpinner.UpdateText(
-						fmt.Sprintf("Found %d git repos (latest: %s)", len(repos), filepath.Base(repoPath)),
-					)
+					scanSpinner.UpdateText(prettyScanText(len(repos), repoPath))
 				}
 				return filepath.SkipDir
 			}
@@ -134,11 +150,10 @@ Examples:
 		})
 		if err != nil {
 			scanSpinner.Fail("Error while scanning for git repositories")
-			log.Fatalf("error walking path %s: %v", root, err)
 		}
 
 		if len(repos) == 0 {
-			scanSpinner.Warning("No git repositories found")
+			// scanSpinner.Warning("No git repositories found")
 			fmt.Println("(no git repos found)")
 			return
 		}
@@ -543,6 +558,36 @@ func promptForFromDate() string {
 
 		}
 	}
+}
+
+// shortenPath shortens a path to at most max characters by keeping the start
+// and end and inserting "…" in the middle if needed.
+func shortenPath(p string, max int) string {
+	if len(p) <= max {
+		return p
+	}
+
+	if max <= 3 {
+		return p[:max]
+	}
+
+	keep := max - 3
+	head := keep / 2
+	tail := keep - head
+
+	return p[:head] + "…" + p[len(p)-tail:]
+}
+
+// prettyScanText builds a nice spinner message with repo count and a shortened path.
+func prettyScanText(repoCount int, currentPath string) string {
+	const maxPathLen = 50
+	short := shortenPath(currentPath, maxPathLen)
+
+	if repoCount == 0 {
+		return fmt.Sprintf("🔍 Scanning for git repos… %s", short)
+	}
+
+	return fmt.Sprintf("📁 Found %d repos | scanning: %s", repoCount, short)
 }
 
 // Helper to write text to tcell screen
