@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -95,6 +96,11 @@ Examples:
 		var repos []string
 		seen := make(map[string]bool)
 
+		// 🔄 nice spinner while scanning the filesystem
+		scanSpinner, _ := pterm.DefaultSpinner.
+			WithRemoveWhenDone(true).
+			Start("Scanning for git repositories...")
+
 		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -116,19 +122,28 @@ Examples:
 				if !seen[repoPath] {
 					seen[repoPath] = true
 					repos = append(repos, repoPath)
+
+					// update spinner text with a little status
+					scanSpinner.UpdateText(
+						fmt.Sprintf("Found %d git repos (latest: %s)", len(repos), filepath.Base(repoPath)),
+					)
 				}
 				return filepath.SkipDir
 			}
 			return nil
 		})
 		if err != nil {
+			scanSpinner.Fail("Error while scanning for git repositories")
 			log.Fatalf("error walking path %s: %v", root, err)
 		}
 
 		if len(repos) == 0 {
+			scanSpinner.Warning("No git repositories found")
 			fmt.Println("(no git repos found)")
 			return
 		}
+
+		scanSpinner.Success(fmt.Sprintf("Found %d git repositories", len(repos)))
 
 		// ----------------------------------
 		// Fetch all repos in parallel
@@ -139,6 +154,12 @@ Examples:
 			errCh = make(chan error, len(repos))
 			sem   = make(chan struct{}, 8) // limit to 8 repos in parallel; tune as you like
 		)
+
+		// 📊 progress bar for repo processing
+		progressBar, _ := pterm.DefaultProgressbar.
+			WithTotal(len(repos)).
+			WithTitle("Replaying your week from git commits").
+			Start()
 
 		for _, repoPath := range repos {
 			wg.Add(1)
@@ -153,11 +174,13 @@ Examples:
 
 				email, err := getGitUserEmail(repoPath)
 				if err != nil {
+					_ = progressBar.Increment()
 					log.Fatalf("could not detect git user email: %v", err)
 				}
 
 				branches, err := listBranches(repoPath)
 				if err != nil {
+					_ = progressBar.Increment()
 					errCh <- fmt.Errorf("unable to list branches for repo %s: %w", repoPath, err)
 					return
 				}
@@ -167,6 +190,7 @@ Examples:
 				for _, br := range branches {
 					commits, err := fetchCommitsForBranch(repoPath, br, flagFrom, flagTo)
 					if err != nil {
+						_ = progressBar.Increment()
 						errCh <- fmt.Errorf("error fetching commits for branch %s in repo %s: %w", br, repoPath, err)
 						return
 					}
@@ -206,10 +230,14 @@ Examples:
 					CommitsByDate: commitsByDate,
 				})
 				mu.Unlock()
+
+				// bump the progress bar for this repo
+				_ = progressBar.Increment()
 			}(repoPath)
 		}
 
 		wg.Wait()
+		_, _ = progressBar.Stop()
 		close(errCh)
 
 		for err := range errCh {
