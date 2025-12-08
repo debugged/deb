@@ -88,7 +88,7 @@ Examples:
 		}
 
 		if flagTo == "" {
-			flagTo = time.Now().Format("2006-01-02")
+			flagTo = time.Now().Add(24 * time.Hour).Format("2006-01-02")
 		}
 
 		var results []RepoResult
@@ -500,7 +500,7 @@ func promptForFromDate() string {
 					redraw()
 					continue
 				}
-				return t.Format("2006-01-02")
+				return t.Add(-24 * time.Hour).Format("2006-01-02")
 			}
 
 			// --- Arrow keys (day changes) ---
